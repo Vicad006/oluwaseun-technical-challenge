@@ -1,0 +1,272 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template creates Auto Scaling Group.
+
+Parameters:
+  ExportVpcStackName:
+    Description: The name of the vpc stack that exports values
+    Type: String
+
+  OperatorEMail:
+    Description: A valid Email address to notify if there are any scaling operations
+    Type: String
+
+  EC2KeyName:
+    Description: Name of an EC2 KeyPair to enable SSH access to the instance.
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+
+  WebServerLaunchTemplateName:
+    AllowedPattern: '[a-zA-Z0-9\(\)\.\-/_]+'
+    ConstraintDescription: Must be unique to this account. Max 128 chars. No spaces or special characters like '&', '*', '@'.
+    Default: Nebula-Server-Launch-Template
+    Description: Name of launch template
+    Type: String
+
+  InstanceType:
+    Description: WebServers EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t1.micro
+      - t2.nano
+      - t2.micro
+      - t2.small
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+
+
+
+
+
+
+Resources:
+  #----   Start of Application Load Balancer Specification ------#
+  ALBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP/HTTPS access on port 80/443
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: ALB Security Group
+      VpcId:
+        Fn::ImportValue: !Sub ${ExportVpcStackName}-VPC
+
+  MyNebulaServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access on ports 80 and 22
+      GroupName: MyNebulaServerSecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 82.2.126.98/32
+      Tags:
+        - Key: Name
+          Value: MyNebulaServerSecurityGroup
+      VpcId:
+        Fn::ImportValue: !Sub ${ExportVpcStackName}-VPC
+
+  #Create an Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: application-load-balancer
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets:
+        - Fn::ImportValue: !Sub ${ExportVpcStackName}-PublicSubnet1
+        - Fn::ImportValue: !Sub ${ExportVpcStackName}-PublicSubnet2
+
+  #Create a Listener on Port 80
+  ALBListenerNoSslCertificate:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  # Create a Target Group
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 200,302
+      Name: MyWebServers
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
+      VpcId:
+        Fn::ImportValue: !Sub ${ExportVpcStackName}-VPC
+#----   End of Application Load Balancer Specification ------#
+
+
+
+
+
+
+
+#----   Start of Auto Scaling Group Specification ------#
+  WebServerLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref WebServerLaunchTemplateName
+      LaunchTemplateData:
+        ImageId: ami-09d3b3274b6c5d4aa
+        InstanceType: !Ref InstanceType
+        KeyName: myLab1
+        Monitoring:
+          Enabled: true
+        SecurityGroupIds:
+          - !Ref MyNebulaServerSecurityGroup
+        UserData:
+          Fn::Base64:
+            !Sub |
+            #!/bin/bash -xe
+            sudo su
+            yum update -y
+            yum install -y httpd
+            cd /var/www/html
+            wget https://github.com/Vicad006/oluwaseun-technical-challenge/archive/refs/heads/main.zip
+            unzip main.zip
+            cp -r oluwaseun-technical-challenge-main/* /var/www/html/
+            rm -rf oluwaseun-technical-challenge-main main.zip
+            systemctl enable httpd
+            systemctl start httpd
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: !Ref OperatorEMail
+          Protocol: email
+
+  WebServerAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: Nebula Auto Scaling Group
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub ${ExportVpcStackName}-PublicSubnet1
+        - Fn::ImportValue: !Sub ${ExportVpcStackName}-PublicSubnet2
+      HealthCheckGracePeriod: 300
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateName: !Ref WebServerLaunchTemplateName
+        Version: !GetAtt WebServerLaunchTemplate.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 6
+      DesiredCapacity: 1
+      Tags:
+        - Key: Name
+          Value: AS-WebServer
+          PropagateAtLaunch: true
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+      NotificationConfiguration:
+        TopicARN: !Ref NotificationTopic
+        NotificationTypes:
+          - 'autoscaling:EC2_INSTANCE_LAUNCH'
+          - 'autoscaling:EC2_INSTANCE_LAUNCH_ERROR'
+          - 'autoscaling:EC2_INSTANCE_TERMINATE'
+          - 'autoscaling:EC2_INSTANCE_TERMINATE_ERROR'
+
+  WebServerScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref WebServerAutoScalingGroup
+      Cooldown: 60
+      ScalingAdjustment: 1
+
+  WebServerScaleDownPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref WebServerAutoScalingGroup
+      Cooldown: 60
+      ScalingAdjustment: -1
+
+  CPUAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-up if CPU > 90% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 90
+      AlarmActions:
+        - !Ref WebServerScaleUpPolicy
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref WebServerAutoScalingGroup
+      ComparisonOperator: GreaterThanThreshold
+
+  CPUAlarmLow:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: Scale-down if CPU < 70% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 70
+      AlarmActions:
+        - !Ref WebServerScaleDownPolicy
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref WebServerAutoScalingGroup
+      ComparisonOperator: LessThanThreshold
+
+
+
+
+Outputs:
+  # Export Target Group
+  ALBTargetGroup:
+    Description: Webserver target group
+    Export:
+      Name: !Sub ${AWS::StackName}-ALBTargetGroup
+    Value: !Ref ALBTargetGroup
+
+  # Export Application Load Balancer Dns Name
+  ApplicationLoadBalancerDnsName:
+    Description: Application Load Balancer DNS Name
+    Export:
+      Name: !Sub ${AWS::StackName}-ApplicationLoadBalancerDnsName
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+
+  # Export Application Load Balancer Zone ID
+  ApplicationLoadBalancerZoneID:
+    Description: Application Load Balancer Canonical Hosted Zone ID
+    Export:
+      Name: !Sub ${AWS::StackName}-ApplicationLoadBalancerZoneID
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+
+  # Export Application Load Balancer Zone ID
+  ApplicationLoadBalancerArn:
+    Description: Application Load Balancer full name
+    Export:
+      Name: !Sub ${AWS::StackName}-ApplicationLoadBalancerArn
+    Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+
+
+
