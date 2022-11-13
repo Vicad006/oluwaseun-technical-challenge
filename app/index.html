@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+
+    <!-- Page Title-->
+    <title>Oluwaseun - Nebula Technical Challenge</title>
+
+    <!-- Meta Tags-->
+    <meta name="description" content="OLUWASEUN MOSAKU AWS PROJECT">
+
+    <!-- Viewport Meta-->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="css/loader-color-1.css">
+    <link rel="stylesheet" type="text/css" href="css/plugins.css">
+    <link rel="stylesheet" type="text/css" href="css/main.css">
+    <link rel="stylesheet" type="text/css" href="css/color-1.css">
+
+    <!-- Custom Browser Color Start -->
+    <meta name="theme-color" content="#6642FA">
+    <meta name="msapplication-navbutton-color" content="#6642FA">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#6642FA">
+    <!-- Custom Browser Color End -->
+
+  </head>
+
+  <body>
+
+    <!-- Loader Start -->
+    <div class="loader">
+      <div class="loader__content">
+        <div class="loader__logo slideInDown">
+          <!-- Your Logo Here -->
+          <img src="img/qinetiq.jpg" alt="qinetiq">
+        </div>
+        <div class="loader__caption slideInUp">
+          <p class="loading-text">Loading</p>
+          <span class="loading-dots">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <!-- Loader End -->
+
+    <!-- Custom HTML Start -->
+
+    <!-- Main Section Start-->
+    <section id="main" class="section-main">
+      <div class="container-fluid p-0 fullheight">
+        <div class="row g-0 fullheight">
+
+          <!-- Main Section Intro Start -->
+          <div id="intro" class="col-12 col-xl-9 section-main__intro">
+
+            <!-- Intro Headline Start -->
+            <div class="intro__headline">
+              <p class="headline__subtitle">Please</p>
+
+              <h1 class="headline__title clip">
+                <span class="words-wrapper" style="font-size:35%; margin-top:20px;">
+                  <b class="is-visible">Click the button below to provide your name </b>
+                  <b>And get your response.</b>
+                </span>
+              </h1>
+
+              <p class="headline__description">Please click the button below to provide your name and get your response.</p>
+              <div class="headline__btnholder">
+                <a href="#" class="button button-solid-light" id="notify-trigger">
+                  <span class="button-caption">Click to provide your name</span>
+                </a>
+              </div>
+            </div>
+            <!-- Intro Headline End -->
+
+          </div>
+          <div class="col-12 col-xl-3 section-main__aside">
+            <div id="stayintouch" class="stayintouch">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- Main Section End -->
+
+    <section id="about" class="section-inner about">
+      <div class="container-fluid p-0 fullheight">
+        <div class="row g-0 fullheight">
+          <div class="col-12 section-inner__content">
+            <div class="section-inner__blocks no-padding-bottom">
+              <div class="content-block features">
+                <div class="container-fluid p-0">
+                  <!-- features single item -->
+                  <div class="row g-0 flex-md-row-reverse">
+                    <div class="col-12 col-md-6">
+                      <div class="feature__image feature-image-6"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+      </div>
+    </section>
+
+
+    <div id="notify" class="notify">
+      <div class="container-fluid p-0 fullheight">
+        <div class="row g-0 fullheight">
+          <div class="col-12">
+
+            <div class="notify__controls">
+              <a class="button-square button-outline-light section-close" href="#0" id="notify-close">
+                <i class="fas fa-times"></i>
+              </a>
+            </div>
+
+            <div class="notify__content">
+
+              <div class="content-block margin-bottom-s">
+                <p class="popup__title light transition-el transition-el-1">Please type your name in the TextField below</p>
+                <p id="result-display" class="popup__subtitle light transition-el transition-el-2"> </p>
+              </div>
+
+              <div class="content-block grid-block">
+                <div class="form-container">
+                  <form class="form form-light notify-form" id="notify-form">
+                    <div class="container-fluid px-4">
+                      <div class="row gx-5">
+                        <div class="col-12">
+                          <input id="fullName" type="text" placeholder="Full name" required>
+                          <a id="submitButton" class="button button-solid-light transition-el transition-el-4">
+                            <span>Submit</span>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <!-- Notify Content End -->
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Notify Section End -->
+
+    <!-- Load Scripts Start -->
+    <script src="js/libs.min.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+    <!-- Load Scripts End -->
+
+  </body>
+
+</html>
