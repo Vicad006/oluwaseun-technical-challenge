@@ -170,7 +170,7 @@ Resources:
         LaunchTemplateName: !Ref WebServerLaunchTemplateName
         Version: !GetAtt WebServerLaunchTemplate.LatestVersionNumber
       MinSize: 1
-      MaxSize: 6
+      MaxSize: 3
       DesiredCapacity: 1
       Tags:
         - Key: Name
